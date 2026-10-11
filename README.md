@@ -19,7 +19,7 @@
 
 ## 安装
 
-从 [Releases](../../releases) 下载最新 `道历_vX.X.X.apk`，手机直接安装。
+从 [Releases](../../releases) 下载最新 `DaoistCalendar-vX.X.X.apk`，手机直接安装。
 
 - Android 8.0+；首次启动请允许通知权限，提醒即自动排期。
 - iOS 版需自行用 Xcode 构建安装（本仓库不含签名包）。
