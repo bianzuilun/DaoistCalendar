@@ -1,0 +1,30 @@
+# Flutter / Dart
+app/.dart_tool/
+app/.flutter-plugins
+app/.flutter-plugins-dependencies
+app/.packages
+app/build/
+
+# Android
+app/android/.gradle/
+app/android/local.properties
+app/android/app/.cxx/
+app/android/key.properties
+
+# iOS
+app/ios/Pods/
+app/ios/.symlinks/
+app/ios/Flutter/Flutter.framework
+app/ios/Flutter/Flutter.podspec
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# 本地产物（不入库）
+*.apk
+data/flutter_releases.json
+data/shot_*.png
+data/raw/day_*.html
+tools/__pycache__/
