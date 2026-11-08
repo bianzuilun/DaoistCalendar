@@ -4,6 +4,7 @@ import 'package:lunar/lunar.dart';
 import '../app_state.dart';
 import '../rules_engine.dart';
 import '../theme.dart';
+import 'widgets.dart';
 
 class ScripturesPage extends StatelessWidget {
   final AppState state;
@@ -14,35 +15,71 @@ class ScripturesPage extends StatelessWidget {
     final engine = state.engine!;
     return SafeArea(
       child: ListView(
-        padding: const EdgeInsets.only(bottom: 24),
+        padding: const EdgeInsets.fromLTRB(16, 4, 16, 28),
         children: [
-          const Padding(
-            padding: EdgeInsets.fromLTRB(16, 16, 16, 6),
-            child: Text('经典与神尊',
-                style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700)),
+          const PageHeader(
+            title: '经典',
+            subtitle: '常诵经籍与所属神尊。点开可看圣诞、下降与下次日期。',
           ),
-          const Padding(
-            padding: EdgeInsets.fromLTRB(16, 0, 16, 8),
-            child: Text('主要经典所属神尊的圣诞、下降与斋期，点按查看详情与下次日期。',
-                style: TextStyle(fontSize: 13, color: T.muted)),
-          ),
-          ...state.scriptures.map((s) => Card(
-                child: ListTile(
-                  title: Text(s.title,
-                      style: const TextStyle(fontWeight: FontWeight.w600)),
-                  subtitle: Text(
-                      s.common.isEmpty ? s.deity : '${s.common} · ${s.deity}',
-                      maxLines: 1, overflow: TextOverflow.ellipsis),
-                  trailing: const Icon(Icons.chevron_right, color: T.muted),
-                  onTap: () => Navigator.push(context, MaterialPageRoute(
-                      builder: (_) =>
-                          ScriptureDetail(engine: engine, scripture: s))),
+          ...state.scriptures.map((s) {
+            final name = s.common.isEmpty ? s.title : s.common;
+            return PaperCard(
+              margin: const EdgeInsets.only(bottom: 10),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => ScriptureDetail(engine: engine, scripture: s),
                 ),
-              )),
+              ),
+              child: Row(
+                children: [
+                  SealMark(name),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(name, style: T.heading),
+                        if (s.common.isNotEmpty) ...[
+                          const SizedBox(height: 2),
+                          Text(
+                            s.title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: T.caption,
+                          ),
+                        ],
+                        if (s.deity.isNotEmpty) ...[
+                          const SizedBox(height: 3),
+                          Text(
+                            _shortDeity(s.deity),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontSize: 13, height: 1.3, color: T.inkSoft),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  const Icon(Icons.chevron_right, color: T.muted, size: 20),
+                ],
+              ),
+            );
+          }),
         ],
       ),
     );
   }
+}
+
+String _shortDeity(String deity) {
+  final i = deity.indexOf('（');
+  if (i > 0) return deity.substring(0, i);
+  final j = deity.indexOf('(');
+  if (j > 0) return deity.substring(0, j);
+  return deity;
 }
 
 class ScriptureDetail extends StatelessWidget {
@@ -51,13 +88,12 @@ class ScriptureDetail extends StatelessWidget {
 
   const ScriptureDetail({super.key, required this.engine, required this.scripture});
 
-  String _fmt(DateTime? d) =>
-      d == null ? '待查' : '${d.year}年${d.month}月${d.day}日';
+  String _fmt(DateTime? d) => d == null ? '待查' : '${d.year}年${d.month}月${d.day}日';
 
   @override
   Widget build(BuildContext context) {
     final now = DateTime.now();
-    final rows = <Widget>[];
+    final rows = <_DateRow>[];
 
     for (final d in scripture.dates) {
       final type = d['type'] as String;
@@ -86,83 +122,144 @@ class ScriptureDetail extends StatelessWidget {
         default:
           cycle = '';
       }
-      rows.add(Padding(
-        padding: const EdgeInsets.symmetric(vertical: 6),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              margin: const EdgeInsets.only(top: 7),
-              width: 6,
-              height: 6,
-              decoration:
-                  const BoxDecoration(color: T.accent, shape: BoxShape.circle),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(label, style: const TextStyle(fontSize: 15)),
-                  Text('$cycle · 下次：${_fmt(when)}',
-                      style: const TextStyle(fontSize: 12, color: T.muted)),
-                ],
+      rows.add(_DateRow(label: label, cycle: cycle, when: _fmt(when)));
+    }
+
+    final barTitle = scripture.common.isEmpty ? scripture.title : scripture.common;
+
+    return Scaffold(
+      appBar: AppBar(title: Text(barTitle)),
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 4, 16, 32),
+        children: [
+          Text(scripture.title, style: T.title.copyWith(fontSize: 24)),
+          if (scripture.deity.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(
+              scripture.deity,
+              style: const TextStyle(
+                fontSize: 13,
+                height: 1.5,
+                color: T.accent,
+                fontWeight: FontWeight.w600,
               ),
             ),
           ],
-        ),
-      ));
-    }
-
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(scripture.common.isEmpty ? scripture.title : scripture.common),
-        backgroundColor: T.paper,
-        foregroundColor: T.ink,
-        elevation: 0.5,
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          Text(scripture.title,
-              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
-          const SizedBox(height: 4),
-          Text(scripture.deity,
-              style: const TextStyle(
-                  fontSize: 13, color: T.accent, fontWeight: FontWeight.w600)),
-          const SizedBox(height: 10),
-          Text(scripture.desc, style: const TextStyle(fontSize: 14, height: 1.6)),
-          const Divider(height: 28),
-          const Text('相关日期',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-          const SizedBox(height: 6),
-          ...rows,
-          if (scripture.benming != null) ...[
-            const Divider(height: 28),
-            const Text('本命星君（按生年地支）',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: scripture.benming!
-                  .map((b) => Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: T.line),
-                        ),
-                        child: Text('${b['zhi']}年 · ${b['star']}',
-                            style: const TextStyle(fontSize: 13)),
-                      ))
-                  .toList(),
+          if (scripture.desc.isNotEmpty) ...[
+            const SizedBox(height: 14),
+            Container(
+              padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+              decoration: BoxDecoration(
+                color: T.paperDeep.withValues(alpha: 0.55),
+                borderRadius: const BorderRadius.only(
+                  topRight: Radius.circular(12),
+                  bottomRight: Radius.circular(12),
+                ),
+                border: Border(
+                  left: BorderSide(color: T.accent.withValues(alpha: 0.75), width: 2.5),
+                ),
+              ),
+              child: Text(scripture.desc, style: T.body),
             ),
-            const SizedBox(height: 8),
+          ],
+          const SizedBox(height: 22),
+          const SectionLabel('相关日期'),
+          ...rows.map((row) => Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: PaperCard(
+                  padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(row.label, style: const TextStyle(fontSize: 15, height: 1.4, fontWeight: FontWeight.w600)),
+                      if (row.cycle.isNotEmpty) ...[
+                        const SizedBox(height: 4),
+                        Text(row.cycle, style: T.caption),
+                      ],
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: T.accent.withValues(alpha: 0.08),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: const Text(
+                              '下次',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: T.accent,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            row.when,
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: T.ink,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              )),
+          if (scripture.benming != null) ...[
+            const SizedBox(height: 12),
+            const SectionLabel('本命星君'),
+            const Text('按生年地支', style: T.caption),
+            const SizedBox(height: 10),
+            LayoutBuilder(
+              builder: (context, constraints) {
+                const gap = 8.0;
+                final width = (constraints.maxWidth - gap * 2) / 3;
+                return Wrap(
+                  spacing: gap,
+                  runSpacing: gap,
+                  children: scripture.benming!
+                      .map((b) => SizedBox(
+                            width: width,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
+                              decoration: BoxDecoration(
+                                color: T.card,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: T.line),
+                              ),
+                              child: Column(
+                                children: [
+                                  Text(
+                                    b['zhi'] ?? '',
+                                    style: const TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w700,
+                                      color: T.accent,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    b['star'] ?? '',
+                                    textAlign: TextAlign.center,
+                                    style: const TextStyle(fontSize: 12, height: 1.3, color: T.inkSoft),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ))
+                      .toList(),
+                );
+              },
+            ),
+            const SizedBox(height: 12),
             const Text(
-                '本命日：依生年地支所属本命星君，于其下降日或九皇会其降世之日诵《北斗经》，祈福延生。',
-                style: TextStyle(fontSize: 12, color: T.muted, height: 1.5)),
+              '本命日依生年地支所属星君，于其下降日或九皇会降世之日诵《北斗经》，祈福延生。',
+              style: T.caption,
+            ),
           ],
         ],
       ),
@@ -191,4 +288,11 @@ class ScriptureDetail extends StatelessWidget {
     const pre = ['初', '十', '廿', '三'];
     return '${pre[d ~/ 10]}${'一二三四五六七八九十'[d % 10 - 1]}';
   }
+}
+
+class _DateRow {
+  final String label;
+  final String cycle;
+  final String when;
+  const _DateRow({required this.label, required this.cycle, required this.when});
 }
